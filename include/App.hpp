@@ -436,6 +436,30 @@ private:
     bool m_IsPlaced;
 };
 
+class Potato : public Util::GameObject {
+public:
+    Potato() : Util::GameObject(
+        std::make_unique<Util::Image>("C:/Users/yello/Shawarma/Resources/Image/Food/potato.png"), 3),
+        m_IsPlaced(false) {
+        m_Transform.translation = glm::vec2(590.0f, -88.0f);
+        m_Transform.scale = glm::vec2(0.5f, 0.5f);
+    }
+    bool IsClicked() {
+        glm::vec2 mousePos = Util::Input::GetCursorPosition();
+        bool mousePressed = Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB);
+        float imageWidth = 200.0f * m_Transform.scale.x;
+        float imageHeight = 250.0f * m_Transform.scale.y;
+        glm::vec2 buttonMin = m_Transform.translation - glm::vec2(imageWidth / 2, imageHeight / 2);
+        glm::vec2 buttonMax = m_Transform.translation + glm::vec2(imageWidth / 2, imageHeight / 2);
+        return mousePressed &&
+               mousePos.x >= buttonMin.x && mousePos.x <= buttonMax.x &&
+               mousePos.y >= buttonMin.y && mousePos.y <= buttonMax.y;
+    }
+    bool IsPlaced() const { return m_IsPlaced; }
+    void SetPlaced(bool placed) { m_IsPlaced = placed; }
+private:
+    bool m_IsPlaced;
+};
 
 //--------------------------------------
 // 客人類別（包含吃東西的狀態）
@@ -510,12 +534,17 @@ private:
     std::shared_ptr<Sauce> m_Sauce;
     std::shared_ptr<Pickle> m_Pickle;
     std::shared_ptr<ShavedMeat> m_ShavedMeat;
+    std::shared_ptr<Potato> m_Potato;
     // 互動用的 FrenchFries 物件（例如用來檢查客人是否靠近）
     std::vector<std::shared_ptr<FrenchFries>> m_FrenchFriesList;
     std::vector<std::shared_ptr<Customer>> m_Customers;
     std::vector<std::shared_ptr<Topping>> toppings; // 其他新增的配料
 
     std::vector<std::shared_ptr<Roll>> m_Rolls;
+    int m_Pstate = 2;  // 初始值為2：未放置
+    int m_FryingCounter = 0;
+    std::shared_ptr<Topping> m_Frying;  // 儲存frying topping物件指標
+
 
 };
 

@@ -55,6 +55,7 @@ void App::Start() {
     m_Sauce = std::make_shared<Sauce>();
     m_ShavedMeat = std::make_shared<ShavedMeat>();
 
+    m_Potato = std::make_shared<Potato>();
     // 初始畫面只加入背景與部分按鈕
     m_Renderer->AddChild(m_StartButton);
     m_Renderer->AddChild(m_ShopButton);
@@ -152,6 +153,34 @@ void App::Update() {
             toppings.push_back(newTopping);
         }
 
+        if (!m_Potato->IsPlaced() && m_Potato->IsClicked()) {
+            m_Potato->SetPlaced(true);
+            m_Frying = std::make_shared<Topping>(
+                "C:/Users/yello/Shawarma/Resources/Image/Food/frying.png",
+                "potato"
+            );
+            m_Frying->m_Transform.translation = glm::vec2(480.0f, -40.0f);
+            m_Renderer->AddChild(m_Frying);
+            m_Pstate = 0;
+        }
+
+        // 只有當 Pstate == 0（已生成 frying）時才檢查點擊 frying
+        if (m_Pstate == 0 && m_Frying) {
+            glm::vec2 mousePos = Util::Input::GetCursorPosition();
+            if (Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB) &&
+                mousePos.x >= 400 && mousePos.x <= 550 &&
+                mousePos.y >= -100 && mousePos.y <= 0)
+            {
+                m_Pstate = 1;
+            }
+
+            if (m_Pstate == 1) {
+                m_Pstate = 0;
+                m_FryingCounter++;
+                std::cout << "Frying topping clicked, count: " << m_FryingCounter << std::endl;
+            }
+        }
+
         // 處理客人與 FrenchFries 的互動邏輯…
         for (auto& customer : m_Customers) {
             for (auto it = m_FrenchFriesList.begin(); it != m_FrenchFriesList.end(); ) {
@@ -188,13 +217,25 @@ void App::Update() {
             }
         }
         // 按下 F 鍵補充新的薯條
-        if (Util::Input::IsKeyUp(Util::Keycode::F)) {
+        if (m_FryingCounter == 5) {
+            // 1. 加入新的薯條
             auto newFries = std::make_shared<FrenchFries>();
-            // 設定新的薯條位置（可根據需要調整位置）
             newFries->m_Transform.translation = glm::vec2(100.0f + m_FrenchFriesList.size() * 60, -50.0f);
             m_FrenchFriesList.push_back(newFries);
             m_Renderer->AddChild(newFries);
+
+            // 2. 移除 frying 物件
+            if (m_Frying) {
+                m_Renderer->RemoveChild(m_Frying);
+                m_Frying.reset();  // 釋放指標
+            }
+
+            // 3. 重設計數器與 potato 狀態
+            m_FryingCounter = 0;
+            m_Potato->SetPlaced(false);
+            m_Pstate = 2;  // 若你使用 2 表示尚未開始
         }
+
 
         // 處理客人與 Roll 的互動邏輯
         for (auto& customer : m_Customers) {
@@ -318,6 +359,9 @@ void App::LoadLevel(const LevelData& level) {
     m_Renderer->AddChild(m_Sauce);
     m_Renderer->AddChild(m_ShavedMeat);
     m_Renderer->AddChild(m_Pickle);
+    m_Renderer->AddChild(m_Potato);
+    m_Potato->SetPlaced(false);  // 重設為未放置
+
     // 加入新關卡背景
     m_Background = std::make_shared<BackgroundImage>(level.backgroundImage);
     m_Renderer->AddChild(m_Background);
