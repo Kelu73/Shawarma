@@ -48,19 +48,21 @@ void App::Start() {
     m_Crust = std::make_shared<Crust>();
     m_Knife = std::make_shared<Knife>();
     m_Paper = std::make_shared<Paper>();
-
-    // 配料物件
     m_Fries = std::make_shared<Fries>();
     m_Pickle = std::make_shared<Pickle>();
     m_Sauce = std::make_shared<Sauce>();
     m_ShavedMeat = std::make_shared<ShavedMeat>();
-
     m_Potato = std::make_shared<Potato>();
-    // 初始畫面只加入背景與部分按鈕
+
+    // 顯示 Frying Counter 文字
+    m_FryingCounterText = std::make_shared<FryingCounterText>();
+
+    // 加入背景與按鈕
     m_Renderer->AddChild(m_StartButton);
     m_Renderer->AddChild(m_ShopButton);
     m_Renderer->AddChild(m_Background);
 }
+
 
 void App::Update() {
     // 移除原本呼叫的 m_Fries->OnClick();（因為我們改由下面的判斷處理）
@@ -177,6 +179,10 @@ void App::Update() {
             if (m_Pstate == 1) {
                 m_Pstate = 0;
                 m_FryingCounter++;
+                if (m_FryingCounterText) {
+                    m_FryingCounterText->UpdateCounter(m_FryingCounter);
+                }
+
                 std::cout << "Frying topping clicked, count: " << m_FryingCounter << std::endl;
             }
         }
@@ -232,6 +238,9 @@ void App::Update() {
 
             // 3. 重設計數器與 potato 狀態
             m_FryingCounter = 0;
+            if (m_FryingCounterText) {
+                m_FryingCounterText->UpdateCounter(0);
+            }
             m_Potato->SetPlaced(false);
             m_Pstate = 2;  // 若你使用 2 表示尚未開始
         }
@@ -361,6 +370,7 @@ void App::LoadLevel(const LevelData& level) {
     m_Renderer->AddChild(m_Pickle);
     m_Renderer->AddChild(m_Potato);
     m_Potato->SetPlaced(false);  // 重設為未放置
+    m_Renderer->AddChild(m_FryingCounterText);
 
     // 加入新關卡背景
     m_Background = std::make_shared<BackgroundImage>(level.backgroundImage);

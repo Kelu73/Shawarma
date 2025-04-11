@@ -7,12 +7,15 @@
 #include "Util/Renderer.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
+#include "Util/Text.hpp"
+#include "Util/Color.hpp"
+
 #include <unordered_set>
 #include <vector>
 #include <string>
 #include "Roll.hpp"
 #include "LevelManager.hpp"
-
+#include "FryingCounterText.hpp"
 
 //--------------------------------------
 // 場景背景
@@ -545,6 +548,7 @@ private:
     int m_FryingCounter = 0;
     std::shared_ptr<Topping> m_Frying;  // 儲存frying topping物件指標
 
+    std::shared_ptr<FryingCounterText>m_FryingCounterText;
 
 };
 
