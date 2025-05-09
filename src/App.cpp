@@ -125,14 +125,39 @@ void App::Update() {
             }
             ++it;
         }
-        if (m_Customers.empty()) {
+
+    }
+    if (m_CurrentPhase == phase::phase2
+     && m_LevelManager.IsLevelFinished()
+     && m_Customers.empty())
+    {
+        // 依照金額判斷過關
+        if (m_MoneyManager.GetBalance() >= 100) {
+            // 過關：顯示結算畫面
             m_Renderer->AddChild(m_LevelCompleteScreen);
             m_Renderer->AddChild(m_NextButton);
             m_CurrentPhase = phase::levelComplete;
-            return;
         }
-    }
+        else {
+            // 失敗：顯示失敗畫面與重試按鈕
+            m_FailureScreen = std::make_shared<Util::GameObject>(
+                std::make_unique<Util::Image>(
+                    "C:/Users/yello/Shawarma/Resources/Image/background/FailPage.png"
+                ), 7
+            );
+            m_FailureScreen->m_Transform.translation = {0,0};
+            m_FailureScreen->m_Transform.scale       = {0.7f,0.7f};
+            m_Renderer->AddChild(m_FailureScreen);
 
+            m_RetryButton = std::make_shared<NextButton>(
+                "C:/Users/yello/Shawarma/Resources/Image/Object/retryBtn.png"
+            );
+            m_Renderer->AddChild(m_RetryButton);
+
+            m_CurrentPhase = phase::failed;
+        }
+        return;
+    }
     // Start game
     if (m_StartButton->IsClicked() && m_CurrentPhase == phase::phase1) {
         m_CurrentPhase = phase::phase2;
@@ -163,7 +188,7 @@ void App::Update() {
 
             // Patience text
             auto patienceText = std::make_shared<PatienceText>();
-            patienceText->SetPatience(60);
+            patienceText->SetPatience(5);
             patienceText->m_Transform.translation = cfg.position + glm::vec2(0.0f, -100.0f);
             customer->SetPatienceText(patienceText);
             m_Renderer->AddChild(patienceText);
@@ -183,34 +208,18 @@ void App::Update() {
                     // 1. 移除畫面元素
                     m_Renderer->RemoveChild(pt);
                     customer->SetPatienceText(nullptr);
-                    if (customer->GetOrderIcon()) m_Renderer->RemoveChild(customer->GetOrderIcon());
+                    if (customer->GetOrderIcon())
+                        m_Renderer->RemoveChild(customer->GetOrderIcon());
                     m_Renderer->RemoveChild(customer);
 
-                    // 2. 計數：此人因耐心離開
-                    m_PatienceFailures++;
-
-                    std::cout << m_PatienceFailures << m_TotalCustomersThisLevel << std::endl;
-                    // 3. 如果「離開人數 == 總客人數」，顯示失敗畫面並停止後續
-                    if (m_PatienceFailures >= m_TotalCustomersThisLevel) {
-                        m_FailureScreen = std::make_shared<Util::GameObject>(
-                            std::make_unique<Util::Image>(
-                                "C:/Users/yello/Shawarma/Resources/Image/background/StartPage.png"
-                            ),
-                            /*layer=*/7
-                        );
-                        m_FailureScreen->m_Transform.translation = glm::vec2(0.0f, 0.0f);
-                        m_FailureScreen->m_Transform.scale       = glm::vec2(0.7f, 0.7f);
-                        m_Renderer->AddChild(m_FailureScreen);
-                        return;  // 直接跳出，顯示失敗畫面
-                    }
-
-                    // 4. 繼續補客人
+                    // 2. 這位客人逾時離開，直接從容器刪除
                     it = m_Customers.erase(it);
                     continue;
                 }
             }
             ++it;
         }
+
 
         // Fries button
         if (!m_Fries->IsPlaced() && m_Fries->IsClicked()) {
@@ -440,6 +449,18 @@ void App::Update() {
         }
     }
 
+    if (m_CurrentPhase == phase::failed && m_RetryButton && m_RetryButton->IsClicked()) {
+        // 清除失敗 UI
+        m_Renderer->RemoveChild(m_FailureScreen);
+        m_Renderer->RemoveChild(m_RetryButton);
+        m_FailureScreen.reset();
+        m_RetryButton.reset();
+
+        // 重新載入本關
+        LoadLevel(m_LevelManager.GetCurrentLevel());
+        m_CurrentPhase = phase::phase2;
+        return;
+    }
     // Shop & return
     if (m_ShopButton->IsClicked() && m_CurrentPhase == phase::phase1) {
         m_CurrentPhase = phase::phase3;
@@ -460,16 +481,23 @@ void App::Update() {
 }
 
 void App::LoadLevel(const LevelData& level) {
-    // Clear previous
+    // —— 0. 重置金錢 ——
+    m_MoneyManager = MoneyManager(0);
+    m_MoneyManager.SetOnChangeCallback([this](int newBal){
+        m_MoneyText->SetText("$" + std::to_string(newBal));
+    });
+    m_MoneyText->SetText("$0");
+
+    // —— 1. 清空上一關殘留的捲餅與薯條
     m_Rolls.clear();
     m_FrenchFriesList.clear();
     toppings.clear();
 
-    // Reset frying counter
+    // —— 2. 重置炸薯條計數
     m_FryingCounter = 0;
     if (m_FryingCounterText) m_FryingCounterText->UpdateCounter(0);
 
-    // New renderer
+    // —— 3. 重建 Renderer 和持續物件 ——
     m_Renderer = std::make_shared<Util::Renderer>();
     m_Renderer->AddChild(m_ReturnButton);
     m_Renderer->AddChild(m_Meat);
@@ -486,14 +514,14 @@ void App::LoadLevel(const LevelData& level) {
     m_Renderer->AddChild(m_FryingCounterText);
     m_Renderer->AddChild(m_MoneyTextGO);
 
+    // —— 4. 載入背景 & 重設客人資料 ——
     m_Background = std::make_shared<BackgroundImage>(level.backgroundImage);
     m_Renderer->AddChild(m_Background);
-    m_TotalCustomersThisLevel = (int)level.customers.size();
-    m_PatienceFailures = 0;
-    m_FailureScreen.reset();
+
     m_Customers.clear();
     m_LevelManager.StartLevel();
 }
+
 
 void App::End() {
     LOG_TRACE("End");

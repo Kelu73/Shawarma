@@ -533,7 +533,7 @@ private:
 class App {
 public:
     enum class State { START, UPDATE, LEVEL_END, END };
-    enum class phase { phase1, phase2, phase3, levelComplete };
+    enum class phase { phase1, phase2, phase3, levelComplete , failed};
     State GetCurrentState() const { return m_CurrentState; }
     void Start();
     void Update();
@@ -580,6 +580,7 @@ private:
     std::shared_ptr<Util::GameObject> m_LevelTextGO;    // 包裝成 GameObject
     std::shared_ptr<Util::GameObject> m_LevelCompleteScreen;
     std::shared_ptr<NextButton> m_NextButton;
+    std::shared_ptr<NextButton> m_RetryButton;
     // 整關總客人數
     int m_TotalCustomersThisLevel = 0;
     // 耐心耗盡離開的人數
